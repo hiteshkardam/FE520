@@ -1,52 +1,79 @@
 import pandas as pd
 import yfinance as yf
 
-# Give user 5 chances to enter correct symbol
-max_chances = 5
+# List of selected stocks
+stocks_list = list()
+
+# Flag to check if any incorrect symbol given
+enter_again = True
 
 # Choice for manual input or top 5
-choice = int(input("1 to Enter Stock Symbol\
-\n2 to Select Top 5 Largest Companies by Market Cap\
-\n3 to Exit\
-\nEnter: "))
+choice = input("1 To Enter Stock Symbols Separated by a White Space\
+\n2 To Select Current Top 'x' Largest Companies by Market Cap\
+\nAny Other Key To Exit\
+\nEnter: ")
 
-if choice == 1:
-    # Take inputs until you get a correct symbol 5 max tries
-    while max_chances != 0:
-        # Decrement chance
-        max_chances -= 1
+if choice == "1":
+    # Input
+    while enter_again:
+        stock_symbols = input("Enter Stock Symbols: ")
+        if stock_symbols:
+            incorrect_symbols = False
+            for symbol in stock_symbols.split(" "):
+                try:
+                    # Attempt to access the 'info' attribute
+                    info = yf.Ticker(symbol).info
+                    stocks_list.append(symbol) if symbol not in stocks_list else None
+                except:
+                    # Error is thrown if the ticker doesn't exist
+                    print(f"Ticker '{symbol}' does not exist.")
+                    incorrect_symbols = True
 
-        # Input
-        stock_symbol = input("Enter stock symbol: ")
-        if stock_symbol.isalnum():
-            try:
-                stock_ticker = yf.Ticker(stock_symbol)
-                # Attempt to access the 'info' attribute
-                info = stock_ticker.info
-                # If no error, the ticker exists
-                print(f"Ticker '{stock_symbol}' exists.")
-                print(f"Company name: {info['longName']}") if "longName" in info.keys()\
-                    else print(f"Company symbol: {info['symbol']}")
-                break
-            except:
-                # KeyError is thrown if the ticker doesn't exist
-                print(f"Ticker '{stock_symbol}' does not exist.")
+            if incorrect_symbols:
+                # Inform user to re-enter stock symbols
+                print("Current selected symbols: ", end="")
+                print(*stocks_list, sep=", ")
+                print("Please re-enter the incorrect stock symbols.")
+            else:
+                # All symbols are correct, prepare to exit the loop
+                enter_again = False
         else:
-            print("Stock symbol incorrect.")
+            # No more symbols to enter, prepare to exit the loop
+            enter_again = False
+
+    # After exiting the loop, print the final set of valid stock symbols, if it exists
+    if stocks_list:
+        print("Final selected symbols: ", end="")
+        print(*stocks_list, sep=', ', end='.\n')
     else:
-        print("Exhausted max tries! Exiting!")
+        print("No symbols selected. Exiting!")
         exit(0)
-elif choice == 2:
+elif choice == "2":
+    enter_again = True
+    while enter_again:
+        top_x = input(f"Enter The Count of Top Companies to Select ('x'): ")
+        if top_x.isnumeric():
+            enter_again = False
+        elif not top_x:
+            print("No symbols selected. Exiting!")
+            exit(0)
+        else:
+            print("Wrong Input!")
+
+    # URL to scrape data from
+    url = "https://stockanalysis.com/list/biggest-companies/"
+
     # Pass a user-agent as it does not allow us to scrape otherwise
     headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:121.0) Gecko/20100101 Firefox/121.0"}
 
-    # URL to scrape from
-    url = "https://stockanalysis.com/list/biggest-companies/"
     dfs = pd.read_html(url, storage_options=headers, index_col="No.")
 
-    # Selecting top 5 from the first table
-    usa_top_5 = dfs[0].head(5)
-    print(usa_top_5)
+    # Selecting top 5 from the first table on page
+    usa_top_5 = dfs[0].head(int(top_x))
+    stocks_list.extend(list(usa_top_5["Symbol"]))
+    print("Final selected symbols: ", end="")
+    print(*stocks_list, sep=', ', end='.\n')
+
 else:
     print("Exiting!")
     exit(0)
